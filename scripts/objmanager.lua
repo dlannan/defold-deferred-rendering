@@ -165,7 +165,7 @@ local ObjectManager  =
 	
 		local i = 0
 		-- ' Two types of loops (same but test is external) - one test vs one test per obj
-		if self.objlist[i] <> Null then
+		if self.objlist[i] ~= nil then
 			if objtype = 0 then
 				for i=0, self.ObjectCount-1 do
 					local tobj =  self.objlist[i]
@@ -227,7 +227,7 @@ local ObjectManager  =
 
 		-- ' Iterate the passes that are valid in the list		
 		for p=0, MAX_PASSES-1 then
-			if passes[p] <> Null then
+			if passes[p] ~= nil then
 				If passes[p].enable = 1 Then
 				' This is not quite what we want.. but it will do
 				Local pass:PassType = passes[p]			
@@ -236,7 +236,7 @@ local ObjectManager  =
 				SetShader(pass.shaderNo)
 			
 				For i=0 To ObjectCount-1
-					If objlist[i] <> Null Then
+					If objlist[i] ~= nil Then
 						Local obj:GenericObject =  objlist[i]
 						' Only render if pass is set!
 						If obj.pass_mask & Int(2 ^ p) > 0  Then
@@ -256,7 +256,7 @@ local ObjectManager  =
 		
 		' Combine pass outputs as required using appropriate shaders
 		For c=0 To MAX_COMBINES-1
-			If combines[c] <> Null Then
+			If combines[c] ~= nil Then
 				If combines[c].enable = 1 Then
 				Local combine:CombineType = combines[c]
 				glClear (combine.clearColour | combine.clearDepth)

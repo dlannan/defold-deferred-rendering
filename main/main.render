@@ -1,1 +1,9 @@
 script: "/main/main.render_script"
+materials {
+  name: "albedo"
+  material: "/assets/materials/albedo.material"
+}
+materials {
+  name: "fullscreen"
+  material: "/assets/materials/fullscreen.material"
+}

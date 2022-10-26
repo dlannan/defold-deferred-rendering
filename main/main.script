@@ -1,3 +1,4 @@
+
 function init(self)
 	msg.post(".", "acquire_input_focus")
 	msg.post("@render:", "use_camera_projection")
@@ -17,6 +18,9 @@ function init(self)
 	model.set_constant("#cube", "light", self.light)
 	model.set_constant("#quad", "light", self.light)
 	model.set_constant("#sphere", "light", self.light)
+
+	msg.post("@render:", "add_pass", { index=0, name="albedo", outtex=1 })
+	msg.post("@render:", "add_combine", { index=0, name="fullscreen", src1=0, src2=nil, outtex=nil })
 end
 
 function on_input(self, action_id, action)

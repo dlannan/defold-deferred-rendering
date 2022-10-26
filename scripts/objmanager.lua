@@ -26,7 +26,6 @@
 local MAX_PASSES 		= 6    		-- ' Change as needed
 local MAX_COMBINES 		= 6    		-- ' Change as needed
 
-
 -- '--------------------------------------------------------------------------------
 -- ' Simple pass type - holds output texture target, and shader number to use
 PassType = {
@@ -77,50 +76,6 @@ OM.Init = function(mgr)
 	end
 end 
 
--- '--------------------------------------------------------------------------------
-OM.AddObject = function(mgr, name, obj) 
-	if mgr.ObjectCount + 1 >= mgr.MaxCount then 
-		return nil 
-	end
-
-	mgr.objlist[mgr.ObjectCount] = obj	-- ' Add object to list
-	-- ' Do other object init here
-	mgr.ObjectCount = mgr.ObjectCount + 1
-	return (mgr.ObjectCount-1)
-end
-
--- '--------------------------------------------------------------------------------
-OM.GetObject = function(mgr, index)
-	local obj =  mgr.objlist[index]
-	return obj
-end
-
--- ' -----------------------------------------------------------------
--- ' Main function for manipulating objects (physics, events, etc)
--- '
--- ' Objects call their owners if they exist. Use the mask to do a specific
--- ' type of pass, so you can order your system runs. '
-OM.UpdateAll = function(mgr, objtype)
-
-	-- ' Two types of loops (same but test is external) - one test vs one test per obj
-	if #mgr.objlist > 0 then
-		if objtype == nil then
-			for i=0, mgr.ObjectCount-1 do
-				local tobj =  mgr.objlist[i]
-				mgr.tobj:Update()
-			end
-		else
-			for i=0, mgr.ObjectCount-1 do
-				local obj =  mgr.objlist[i]
-				-- ' Only render if type is the same
-				if obj.type_id == objtype then
-					obj.Update()
-				end
-			end
-		end
-	end
-end
-
 -- ' -----------------------------------------------------------------
 OM.AddPass = function(mgr, index, shadername, outtex)
 	local pass = {}
@@ -156,17 +111,12 @@ OM.AddPass = function(mgr, index, shadername, outtex)
 end
 
 -- ' -----------------------------------------------------------------
-OM.PassSaveDepth = function(mgr, index, tex)
-	mgr.passes[index].saveDepth = tex	
-end
-
--- ' -----------------------------------------------------------------
-OM.AddCombine = function(mgr, index, shadername, inTex1, inTex2, outtex)
+OM.AddCombine = function(mgr, index, shadername, src1, src2, outtex)
 	local combine = {}
 	combine.shaderName = shadername
 	combine.outTex = outtex
-	combine.inpTex1 = inTex1
-	combine.inpTex2 = inTex2
+	combine.src1Tex = src1 
+	combine.src2Tex = src2 
 	combine.clearColour 	= OM.clear_color -- GL_COLOR_BUFFER_BIT
 	combine.clearDepth 		= 1 -- GL_DEPTH_BUFFER_BIT
 	combine.enable  = 1
@@ -200,23 +150,25 @@ end
 OM.RenderAll = function(mgr)
 
 	-- ' Iterate the passes that are valid in the list		
-	for p=0, mgr.MAX_PASSES-1 do
+	for p=0, MAX_PASSES-1 do
 		if mgr.passes[p] ~= nil then
 			if mgr.passes[p].enable == 1 then
 				-- ' This is not quite what we want.. but it will do
 				local pass = mgr.passes[p]			
 
-				render.set_render_target(pass.render_target, { transient = { pass.clearDepth, 0 } } )
+				if(pass.render_target ~= render.RENDER_TARGET_DEFAULT) then 
+					render.set_render_target(pass.render_target, { transient = { pass.clearDepth, 0 } } )
+				end 
 
-				-- glClear (pass.clearColour | pass.clearDepth)
 				render.clear({[render.BUFFER_COLOR_BIT] = pass.clearColour, [render.BUFFER_DEPTH_BIT] = pass.clearDepth, [render.BUFFER_STENCIL_BIT] = 0})
-				
-				render.set_viewport(0, 0, render.get_window_width(), render.get_window_height())
-				render.set_view(self.view)
-
-				-- SetShader(pass.shaderNo)
 
 				render.enable_material(pass.shaderName)
+
+				-- glClear (pass.clearColour | pass.clearDepth)
+				--render.clear({[render.BUFFER_COLOR_BIT] = pass.clearColour, [render.BUFFER_DEPTH_BIT] = pass.clearDepth, [render.BUFFER_STENCIL_BIT] = 0})
+				
+				-- SetShader(pass.shaderNo)
+
 				render.draw(mgr["pass_pred_"..p])
 			
 				-- for i=0, mgr.ObjectCount-1 do
@@ -228,7 +180,6 @@ OM.RenderAll = function(mgr)
 				-- 		end
 				-- 	end
 				-- end
-
 
 				render.disable_material()
 			
@@ -245,17 +196,32 @@ OM.RenderAll = function(mgr)
 	render.set_render_target(render.RENDER_TARGET_DEFAULT)
 
 	-- ' Combine pass outputs as required using appropriate shaders
-	for c=0, mgr.MAX_COMBINES-1 do
+	for c=0, MAX_COMBINES-1 do
 		if mgr.combines[c] ~= nil then
 			if mgr.combines[c].enable == 1 then
 				local combine = mgr.combines[c]
 
-				render.set_render_target(combine.render_target, { transient = { combine.clearDepth, 0 } } )
+				if(combine.render_target ~= render.RENDER_TARGET_DEFAULT) then 
+					render.set_render_target(combine.render_target, { transient = { combine.clearDepth, 0 } } )
+				end
 
-				-- glClear (combine.clearColour | combine.clearDepth)
+				render.clear({[render.BUFFER_COLOR_BIT] = combine.clearColour, [render.BUFFER_DEPTH_BIT] = combine.clearDepth, [render.BUFFER_STENCIL_BIT] = 0})
 
 				-- SetShader(combine.shaderNo)
 				render.enable_material(combine.shaderName)
+
+				-- glClear (combine.clearColour | combine.clearDepth)
+
+				if(combine.src1Tex) then 
+					print("Enabled Tex0: "..combine.src1Tex)
+					local pass = mgr.passes[combine.src1Tex]
+					render.enable_texture(0, pass.render_target, render.BUFFER_COLOR_BIT)
+				end 
+				if(combine.src2Tex) then 
+					print("Enabled Tex1")
+					local pass = mgr.passes[combine.src2Tex]
+					render.enable_texture(1, pass.render_target, render.BUFFER_COLOR_BIT)
+				end
 
 				-- RenderFullScreenQuad(combine.inpTex1, combine.inpTex2)
 				render.draw(mgr["combine_pred_"..c])
@@ -286,7 +252,8 @@ OM.NewObjectManager = function()
 
 	mgr.view 	= vmath.matrix4()
 	mgr.near	= -1
-    mgr.far 	= 1
+	mgr.far 	= 1
+	return mgr
 end 
 
 -- An Object manager create with settings - this should normally be used.

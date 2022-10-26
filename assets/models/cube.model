@@ -1,5 +1,5 @@
 mesh: "/builtins/assets/meshes/cube.dae"
-material: "/builtins/materials/model.material"
+material: "/assets/materials/albedo.material"
 textures: "/assets/images/green.png"
 skeleton: ""
 animations: ""

@@ -23,88 +23,13 @@
 -- '  Animation id
 -- ' and so on... See the Blitz forum for more detail on this.
 
--- ' Enum of types of objects supported
-local Type_Static_Object			= 1
-local Type_Static_3DSObject		    = 2
-local Type_Dynamic_Object			= 3
-local Type_Dynamic_3DSObject		= 4
-local Type_Character				= 5
-local Type_Vehicle				    = 6
-local Type_Camera				    = 7
+local MAX_PASSES 		= 6    		-- ' Change as needed
+local MAX_COMBINES 		= 6    		-- ' Change as needed
 
--- ' This is where our base Generic Object is defined
-local GenericObject = {
-	-- ' Little note. USE DOUBLE NOT FLOAT. Ok.. why? Because of scale. Unless you wish to visit
-	-- ' the realm of scaling hell, use double. If you use float, your accuracy dies at 5km from 0.0
-	-- ' if 1.0 represents 1m. The reason is floats are simply not accurate when they scale to large 
-	-- ' sizes. If you are doing an indoor shooter, or something closed then sure use Float. But if 
-	-- ' you are unsure use Double - modern CPU's have barely any difference between Double and Float
-	-- ' perf (in fact most internally convert float to Double anyway!!).
-	x   = 0.0, y = 0.0, z = 0.0,	        -- ' Simple position info about your object
-	h = 0.0, p = 0.0, r = 0.0,	            -- ' Beware using hpr - gimbal hell!! If you can, and understand quaternions
-										    -- ' use them. They will save you a huge amount of hell.
-										    -- ' If there is enough want for a simple Quaternion type, I'll add it.
-	
-	sx = 0.0, sy = 0.0, sz = 0.0,       	-- ' Size of the object in bounding size. For this to work well, we also need
-										    -- ' a pivot position, but for time being position is pivot of model!
-	
-	id	        = 0,    -- ' This is a CRC of the objects name (dont bother keeping strings!!! 
-						-- ' They are slow, and you dont need them!
-	model_id	= 0,    -- ' Will be same as normal id for the moment.
-	physics_id  = 0,	-- ' If I get around to adding it :)
-	state_id	= 0,    -- ' This will be useful later...
-	type_id	    = 0,	-- ' Use this as much as possible - make an enum.. and use it..
-	anim_id	    = 0,	-- ' Probably wont get around to it, anim is a vast area of dev on its own.
-
-	-- ' Rendering specific information - set these masks to apply passes or not
-	pass_mask	= 0     -- ' pass mask - match to index for bit. only 32 bits (passes) to play with 
-
-	-- ' The manager will pass a crcname back to this function
-	GenericObject = function(name) 
-		obj = {}
-		obj.x = 9999999.999999	    -- ' just make it big enough so you can recognise when something hasn't got valid data in it.
-		obj.y = 9999999.999999
-		obj.z = 9999999.999999	
-		obj.sx = 0.0
-		obj.sy = 0.0
-		obj.sz = 0.0
-		obj.h = 0.0
-		obj.p = 0.0
-		obj.r = 0.0
-		obj.id = name
-		obj.model_id 	= name
-		obj.physics_id	= -1
-		obj.type_id 	= Type_Static_Object
-		return obj
-    end, 
-	
-	AddToPass = function(pass)
-		pass_mask = pass_mask | Int(2 ^ pass)
-    end,
-
-	ClearPass = function()
-		pass_mask = 0
-    end,
-	
-	-- ' Use this method to do any custom rendering passes you may want within your
-	-- ' Rendering passes
-	-- ' Derive the Generic class, and override this lethod with your own. 
-	Render = function()
-		
-    end,
-	
-	-- ' Use this method to 'do what you want' with your object
-	-- ' At a minimum you want to 'push' your position and orientation into
-	-- ' your entity object (or they wont change when you render them)
-	Update = function()
-
-    end,
-
-}
 
 -- '--------------------------------------------------------------------------------
 -- ' Simple pass type - holds output texture target, and shader number to use
-local PassType = {
+PassType = {
 	outTex      = 0,
 	shaderNo    = 0,
 	clearColour = 0,
@@ -117,7 +42,7 @@ local PassType = {
 -- ' Simple combine type - holds input Tex1 and Tex2, Shader to use and target type
 -- ' 
 -- ' Target type is an Int. If it is -1 then screen is the output not a tetxure.
-local CombineType = {
+CombineType = {
 	outTex      = 0,
 	shaderNo    = 0,
 	inpTex1     = 0,
@@ -128,163 +53,256 @@ local CombineType = {
 }
 
 -- '--------------------------------------------------------------------------------
+-- Object Manager API that is used to handle object manager pools
+local OM = {}
 
-local ObjectManager  = 
-	MAX_PASSES 			= 6,    		-- ' Change as needed
-	MAX_COMBINES 		= 6,    		-- ' Change as needed
-	
-	ObjectCount         = 0,
-	MaxCount            = 0,   
-	
-	GenericObject       = {}, 
-	passes              = {},
-	combines            = {},
-		
-	AddObject = function(name, obj) 
-		if self.ObjectCount + 1 >= MaxCount Then 
-			return nil 
-        end
+OM.Init = function(mgr)
 
-		self.objlist[self.ObjectCount] = obj	-- ' Add object to list
-		-- ' Do other object init here
-		self.ObjectCount = self.ObjectCount + 1
-		return (self.ObjectCount-1)
-	end,
+	assert(mgr)
+	-- This is an internal default clear color. This can be overridden per pass.
+	mgr.clear_color = vmath.vector4(0, 0, 0, 0)
+	mgr.clear_color.x = sys.get_config("render.clear_color_red", 0)
+	mgr.clear_color.y = sys.get_config("render.clear_color_green", 0)
+	mgr.clear_color.z = sys.get_config("render.clear_color_blue", 0)
+	mgr.clear_color.w = sys.get_config("render.clear_color_alpha", 0)	
 
-	GetObject = function(index)
-		local obj =  self.objlist[index]
-		return obj
-    end,
+	-- Make predicates for passes
+	for pn = 0, MAX_PASSES-1 do 
+		mgr["pass_pred_"..pn] = render.predicate({"pass_"..pn})
+	end
 
-	-- ' -----------------------------------------------------------------
-	-- ' Main function for manipulating objects (physics, events, etc)
-	-- '
-	-- ' Objects call their owners if they exist. Use the mask to do a specific
-	-- ' type of pass, so you can order your system runs.
-	UpdateAll = function(objtype)
-	
-		local i = 0
-		-- ' Two types of loops (same but test is external) - one test vs one test per obj
-		if self.objlist[i] ~= nil then
-			if objtype = 0 then
-				for i=0, self.ObjectCount-1 do
-					local tobj =  self.objlist[i]
-					self.tobj:Update()
-                end
-		    else
-				for i=0, self.ObjectCount-1 do
-					local obj =  self.objlist[i]
-					-- ' Only render if type is the same
-					if obj.type_id = objtype then
-						obj.Update
-                    end
-                end
+	-- Make predicates for combines
+	for cn = 0, MAX_COMBINES-1 do 
+		mgr["combine_pred_"..cn] = render.predicate({"combine_"..cn})
+	end
+end 
+
+-- '--------------------------------------------------------------------------------
+OM.AddObject = function(mgr, name, obj) 
+	if mgr.ObjectCount + 1 >= mgr.MaxCount then 
+		return nil 
+	end
+
+	mgr.objlist[mgr.ObjectCount] = obj	-- ' Add object to list
+	-- ' Do other object init here
+	mgr.ObjectCount = mgr.ObjectCount + 1
+	return (mgr.ObjectCount-1)
+end
+
+-- '--------------------------------------------------------------------------------
+OM.GetObject = function(mgr, index)
+	local obj =  mgr.objlist[index]
+	return obj
+end
+
+-- ' -----------------------------------------------------------------
+-- ' Main function for manipulating objects (physics, events, etc)
+-- '
+-- ' Objects call their owners if they exist. Use the mask to do a specific
+-- ' type of pass, so you can order your system runs. '
+OM.UpdateAll = function(mgr, objtype)
+
+	-- ' Two types of loops (same but test is external) - one test vs one test per obj
+	if #mgr.objlist > 0 then
+		if objtype == nil then
+			for i=0, mgr.ObjectCount-1 do
+				local tobj =  mgr.objlist[i]
+				mgr.tobj:Update()
 			end
-		end	
+		else
+			for i=0, mgr.ObjectCount-1 do
+				local obj =  mgr.objlist[i]
+				-- ' Only render if type is the same
+				if obj.type_id == objtype then
+					obj.Update()
+				end
+			end
+		end
+	end
+end
 
-	end,
-	
-	-- ' -----------------------------------------------------------------
-	AddPass = function(index, shaderno, outtex)
-		local pass = {}
-		pass.shaderNo = shaderno
-		pass.outTex = outtex
-        -- ' Some basic defaults
-		pass.clearColour 	= GL_COLOR_BUFFER_BIT
-		pass.clearDepth 	= GL_DEPTH_BUFFER_BIT
-		pass.saveDepth		= -1	-- ' defines this id as invalid
-		pass.enable			= 1
-		self.passes[index] = pass
-    end,
+-- ' -----------------------------------------------------------------
+OM.AddPass = function(mgr, index, shadername, outtex)
+	local pass = {}
+	pass.shaderName		= shadername
+	pass.outTex 		= outtex
+	-- ' Some basic defaults
+	pass.clearColour 	= OM.clear_color  -- GL_COLOR_BUFFER_BIT
+	pass.clearDepth 	= 1  	-- GL_DEPTH_BUFFER_BIT
+	pass.saveDepth		= -1	-- ' defines this id as invalid
+	pass.enable			= 1
 
-	-- ' -----------------------------------------------------------------
-	PassSaveDepth = function(index, tex)
-		self.passes[index].saveDepth = tex	
-    end,
 
-	-- ' -----------------------------------------------------------------
-	AddCombine = function(index, shaderno, intex1, inTex2, outtex)
-		Local combine = {}
-		combine.shaderNo = shaderno
-		combine.outTex = outtex
-		combine.inpTex1 = inTex1
-		combine.inpTex2 = inTex2
-		combine.clearColour 	= GL_COLOR_BUFFER_BIT
-		combine.clearDepth 		= GL_DEPTH_BUFFER_BIT
-		combine.enable  = 1
-		
-        self.combines[index] = combine
-    end,
+	if( outtex == nil ) then 
+		pass.render_target = render.RENDER_TARGET_DEFAULT
+	else 
+		-- render target buffer parameters
+		local color_params = { format = render.FORMAT_RGBA,
+							width = render.get_window_width(),
+							height = render.get_window_height(),
+							min_filter = render.FILTER_LINEAR,
+							mag_filter = render.FILTER_LINEAR,
+							u_wrap = render.WRAP_CLAMP_TO_EDGE,
+							v_wrap = render.WRAP_CLAMP_TO_EDGE }
+		local depth_params = { format = render.FORMAT_DEPTH,
+							width = render.get_window_width(),
+							height = render.get_window_height(),
+							u_wrap = render.WRAP_CLAMP_TO_EDGE,
+							v_wrap = render.WRAP_CLAMP_TO_EDGE }
+		pass.render_target = render.render_target({[render.BUFFER_COLOR_BIT] = color_params, [render.BUFFER_DEPTH_BIT] = depth_params })
+	end 
 
-	-- ' -----------------------------------------------------------------
-	-- ' Main function for rendering.. all the action realy happens here.
-	-- '
-	-- ' Passes and combines are all processed here in order.
-	RenderAll = funciton()
-		local i = 0
-		local c = 0
-		local p = 0
+	mgr.passes[index] = pass
+end
 
-		-- ' Iterate the passes that are valid in the list		
-		for p=0, MAX_PASSES-1 then
-			if passes[p] ~= nil then
-				If passes[p].enable = 1 Then
-				' This is not quite what we want.. but it will do
-				Local pass:PassType = passes[p]			
-				glClear (pass.clearColour | pass.clearDepth)
+-- ' -----------------------------------------------------------------
+OM.PassSaveDepth = function(mgr, index, tex)
+	mgr.passes[index].saveDepth = tex	
+end
+
+-- ' -----------------------------------------------------------------
+OM.AddCombine = function(mgr, index, shadername, inTex1, inTex2, outtex)
+	local combine = {}
+	combine.shaderName = shadername
+	combine.outTex = outtex
+	combine.inpTex1 = inTex1
+	combine.inpTex2 = inTex2
+	combine.clearColour 	= OM.clear_color -- GL_COLOR_BUFFER_BIT
+	combine.clearDepth 		= 1 -- GL_DEPTH_BUFFER_BIT
+	combine.enable  = 1
+
+	if( outtex == nil ) then 
+		combine.render_target = render.RENDER_TARGET_DEFAULT
+	else 
+		-- render target buffer parameters
+		local color_params = { format = render.FORMAT_RGBA,
+							width = render.get_window_width(),
+							height = render.get_window_height(),
+							min_filter = render.FILTER_LINEAR,
+							mag_filter = render.FILTER_LINEAR,
+							u_wrap = render.WRAP_CLAMP_TO_EDGE,
+							v_wrap = render.WRAP_CLAMP_TO_EDGE }
+		local depth_params = { format = render.FORMAT_DEPTH,
+							width = render.get_window_width(),
+							height = render.get_window_height(),
+							u_wrap = render.WRAP_CLAMP_TO_EDGE,
+							v_wrap = render.WRAP_CLAMP_TO_EDGE }
+		combine.render_target = render.render_target({[render.BUFFER_COLOR_BIT] = color_params, [render.BUFFER_DEPTH_BIT] = depth_params })
+	end 
+
+	mgr.combines[index] = combine
+end
+
+-- ' -----------------------------------------------------------------
+-- ' Main function for rendering.. all the action realy happens here.
+-- '
+-- ' Passes and combines are all processed here in order.
+OM.RenderAll = function(mgr)
+
+	-- ' Iterate the passes that are valid in the list		
+	for p=0, mgr.MAX_PASSES-1 do
+		if mgr.passes[p] ~= nil then
+			if mgr.passes[p].enable == 1 then
+				-- ' This is not quite what we want.. but it will do
+				local pass = mgr.passes[p]			
+
+				render.set_render_target(pass.render_target, { transient = { pass.clearDepth, 0 } } )
+
+				-- glClear (pass.clearColour | pass.clearDepth)
+				render.clear({[render.BUFFER_COLOR_BIT] = pass.clearColour, [render.BUFFER_DEPTH_BIT] = pass.clearDepth, [render.BUFFER_STENCIL_BIT] = 0})
 				
-				SetShader(pass.shaderNo)
+				render.set_viewport(0, 0, render.get_window_width(), render.get_window_height())
+				render.set_view(self.view)
+
+				-- SetShader(pass.shaderNo)
+
+				render.enable_material(pass.shaderName)
+				render.draw(mgr["pass_pred_"..p])
 			
-				For i=0 To ObjectCount-1
-					If objlist[i] ~= nil Then
-						Local obj:GenericObject =  objlist[i]
-						' Only render if pass is set!
-						If obj.pass_mask & Int(2 ^ p) > 0  Then
-							obj.Render()
-						End If
-					End If
-				Next
+				-- for i=0, mgr.ObjectCount-1 do
+				-- 	if mgr.objlist[i] ~= nil then
+				-- 		local obj =  mgr.objlist[i]
+				-- 		-- ' Only render if pass is set!
+				-- 		if bit.band(obj.pass_mask, math.floor(2 ^ p)) > 0 then
+				-- 			obj.Render()
+				-- 		end
+				-- 	end
+				-- end
+
+
+				render.disable_material()
 			
-				glDisable(GL_FRAGMENT_PROGRAM_ARB)
-				glDisable(GL_VERTEX_PROGRAM_ARB)
+				-- glDisable(GL_FRAGMENT_PROGRAM_ARB)
+				-- glDisable(GL_VERTEX_PROGRAM_ARB)
 	
-				SaveColourBufferTexture(pass.outTex)
-				SaveDepthBufferTexture(pass.saveDepth)
-				End If
-			End If		
-		Next
+				-- SaveColourBufferTexture(pass.outTex)
+				-- SaveDepthBufferTexture(pass.saveDepth)
+
+				-- render.set_render_target(render.RENDER_TARGET_DEFAULT)
+			end 
+		end
+	end
+	render.set_render_target(render.RENDER_TARGET_DEFAULT)
+
+	-- ' Combine pass outputs as required using appropriate shaders
+	for c=0, mgr.MAX_COMBINES-1 do
+		if mgr.combines[c] ~= nil then
+			if mgr.combines[c].enable == 1 then
+				local combine = mgr.combines[c]
+
+				render.set_render_target(combine.render_target, { transient = { combine.clearDepth, 0 } } )
+
+				-- glClear (combine.clearColour | combine.clearDepth)
+
+				-- SetShader(combine.shaderNo)
+				render.enable_material(combine.shaderName)
+
+				-- RenderFullScreenQuad(combine.inpTex1, combine.inpTex2)
+				render.draw(mgr["combine_pred_"..c])
+			
+				render.disable_material()
+				-- glDisable(GL_FRAGMENT_PROGRAM_ARB)
+				-- glDisable(GL_VERTEX_PROGRAM_ARB)
+
+				-- if combine.outTex > -1 then
+				-- 	SaveColourBufferTexture(combine.outTex)
+				-- end 
+			end
+		end
+	end 
+	render.set_render_target(render.RENDER_TARGET_DEFAULT)
+end
+
+-- This is an easier way to create a new table for an Object Manager without settings.
+OM.NewObjectManager = function() 
+	local mgr = {		
+		ObjectCount         = 0,
+		MaxCount            = 0,   
 		
-		' Combine pass outputs as required using appropriate shaders
-		For c=0 To MAX_COMBINES-1
-			If combines[c] ~= nil Then
-				If combines[c].enable = 1 Then
-				Local combine:CombineType = combines[c]
-				glClear (combine.clearColour | combine.clearDepth)
+		objlist       		= {}, 
+		passes              = {},
+		combines            = {},
+	}
 
-				SetShader(combine.shaderNo)
-				RenderFullScreenQuad(combine.inpTex1, combine.inpTex2)
-			
-				glDisable(GL_FRAGMENT_PROGRAM_ARB)
-				glDisable(GL_VERTEX_PROGRAM_ARB)
+	mgr.view 	= vmath.matrix4()
+	mgr.near	= -1
+    mgr.far 	= 1
+end 
 
-				If combine.outTex> -1 Then
-					SaveColourBufferTexture(combine.outTex)
-				End If
-				End If
-			End If
-		Next
-	End Function
-	
-	Function Create:ObjectManager(maxsize) 
-		Local mgr:ObjectManager = New ObjectManager 
-		mgr.ObjectCount = 0
-		mgr.MaxCount	= maxsize
-		mgr.objlist		= New GenericObject[maxsize]
-		mgr.passes		= New PassType[MAX_PASSES]
-		mgr.combines	= New CombineType[MAX_COMBINES]
-		Return mgr
-	End	Function 
+-- An Object manager create with settings - this should normally be used.
+OM.CreateNew = function(maxsize) 
+	local mgr = OM.NewObjectManager()
+	mgr.ObjectCount = 0
+	mgr.MaxCount	= maxsize
+	mgr.objlist		= {}
+	mgr.passes		= {}
+	mgr.combines	= {}
+	return mgr
+end
 
-End Type 
+-- ' *******************************************************************************
+-- Return the object manager and the generic object API
 
-' *******************************************************************************
+return OM 
+
+-- ' *******************************************************************************

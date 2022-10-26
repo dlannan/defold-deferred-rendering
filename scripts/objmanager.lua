@@ -157,10 +157,11 @@ OM.RenderAll = function(mgr)
 				local pass = mgr.passes[p]			
 
 				if(pass.render_target ~= render.RENDER_TARGET_DEFAULT) then 
-					render.set_render_target(pass.render_target, { transient = { pass.clearDepth, 0 } } )
+					render.set_render_target(pass.render_target) --, { transient = { pass.clearDepth, 0 } } )
 				end 
 
-				render.clear({[render.BUFFER_COLOR_BIT] = pass.clearColour, [render.BUFFER_DEPTH_BIT] = pass.clearDepth, [render.BUFFER_STENCIL_BIT] = 0})
+				render.clear({[render.BUFFER_COLOR_BIT] = vmath.vector4(1, 0, 0, 0), [render.BUFFER_DEPTH_BIT] = 1})
+				-- render.clear({[render.BUFFER_COLOR_BIT] = pass.clearColour, [render.BUFFER_DEPTH_BIT] = pass.clearDepth, [render.BUFFER_STENCIL_BIT] = 0})
 
 				render.enable_material(pass.shaderName)
 
@@ -171,16 +172,6 @@ OM.RenderAll = function(mgr)
 
 				render.draw(mgr["pass_pred_"..p])
 			
-				-- for i=0, mgr.ObjectCount-1 do
-				-- 	if mgr.objlist[i] ~= nil then
-				-- 		local obj =  mgr.objlist[i]
-				-- 		-- ' Only render if pass is set!
-				-- 		if bit.band(obj.pass_mask, math.floor(2 ^ p)) > 0 then
-				-- 			obj.Render()
-				-- 		end
-				-- 	end
-				-- end
-
 				render.disable_material()
 			
 				-- glDisable(GL_FRAGMENT_PROGRAM_ARB)
@@ -205,7 +196,8 @@ OM.RenderAll = function(mgr)
 					render.set_render_target(combine.render_target, { transient = { combine.clearDepth, 0 } } )
 				end
 
-				render.clear({[render.BUFFER_COLOR_BIT] = combine.clearColour, [render.BUFFER_DEPTH_BIT] = combine.clearDepth, [render.BUFFER_STENCIL_BIT] = 0})
+				-- render.clear({[render.BUFFER_COLOR_BIT] = vmath.vector4(0, 0, 0, 0), [render.BUFFER_DEPTH_BIT] = 1})
+				-- render.clear({[render.BUFFER_COLOR_BIT] = combine.clearColour, [render.BUFFER_DEPTH_BIT] = combine.clearDepth, [render.BUFFER_STENCIL_BIT] = 0})
 
 				-- SetShader(combine.shaderNo)
 				render.enable_material(combine.shaderName)
@@ -213,20 +205,22 @@ OM.RenderAll = function(mgr)
 				-- glClear (combine.clearColour | combine.clearDepth)
 
 				if(combine.src1Tex) then 
-					print("Enabled Tex0: "..combine.src1Tex)
 					local pass = mgr.passes[combine.src1Tex]
 					render.enable_texture(0, pass.render_target, render.BUFFER_COLOR_BIT)
 				end 
 				if(combine.src2Tex) then 
-					print("Enabled Tex1")
 					local pass = mgr.passes[combine.src2Tex]
 					render.enable_texture(1, pass.render_target, render.BUFFER_COLOR_BIT)
 				end
 
 				-- RenderFullScreenQuad(combine.inpTex1, combine.inpTex2)
-				render.draw(mgr["combine_pred_"..c])
+				render.draw(mgr["combine_pred_0"])
 			
+
+				if(combine.src1Tex) then render.disable_texture(0) end
+				if(combine.src2Tex) then render.disable_texture(1) end
 				render.disable_material()
+
 				-- glDisable(GL_FRAGMENT_PROGRAM_ARB)
 				-- glDisable(GL_VERTEX_PROGRAM_ARB)
 

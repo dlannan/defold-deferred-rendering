@@ -7,3 +7,11 @@ materials {
   name: "fullscreen"
   material: "/assets/materials/fullscreen.material"
 }
+materials {
+  name: "specular"
+  material: "/assets/materials/specular.material"
+}
+materials {
+  name: "fullscreen-blend"
+  material: "/assets/materials/fullscreen-blend.material"
+}

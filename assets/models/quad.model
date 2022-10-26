@@ -1,5 +1,5 @@
 mesh: "/builtins/assets/meshes/quad.dae"
-material: "/assets/materials/fullscreen.material"
+material: "/assets/materials/specular.material"
 textures: "/assets/images/brown.png"
 skeleton: ""
 animations: ""

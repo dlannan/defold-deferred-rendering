@@ -125,7 +125,7 @@ embedded_instances {
   id: "fullscreen"
   data: "components {\n"
   "  id: \"fullscreen\"\n"
-  "  component: \"/assets/models/quad.model\"\n"
+  "  component: \"/assets/models/fullscreen.model\"\n"
   "  position {\n"
   "    x: 0.0\n"
   "    y: 0.0\n"

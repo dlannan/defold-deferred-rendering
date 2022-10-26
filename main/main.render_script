@@ -185,6 +185,6 @@ function on_message(self, message_id, message)
     elseif message_id == hash("add_pass") then 
         ObjManager.AddPass(gObjectManager, message.index, message.name, message.outtex)
     elseif message_id == hash("add_combine") then 
-        ObjManager.AddCombine(gObjectManager, message.index, message.name, message.src1, message.src2, message.outtex)
+        ObjManager.AddCombine(gObjectManager, message.index, message.name, message.tex1, message.tex2, message.outtex)
     end
 end

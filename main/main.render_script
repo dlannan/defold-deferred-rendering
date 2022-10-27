@@ -1,11 +1,9 @@
 
 -- An object manager that helps with deferred rendering process (obj ordering, combines and passes)
 --  Note: There can be more than one object manager if needed.
-local ObjManager = require("scripts.objmanager")
+local RenderManager = require("scripts.renderManager")
 
--- This is not a hard limit, but its useful to track and error againsts
-local MAX_OBJECTS   = 100
-gObjectManager = ObjManager.CreateNew(MAX_OBJECTS)
+gRenderManager = RenderManager.CreateNew()
 
 --
 -- projection that centers content with maintained aspect ratio and optional zoom
@@ -46,7 +44,7 @@ function init(self)
     self.particle_pred = render.predicate({"particle"})
     self.model_pred = render.predicate({"model"})
     
-    ObjManager.Init(gObjectManager)
+    RenderManager.Init(gRenderManager)
 
     self.clear_color = vmath.vector4(0, 0, 0, 0)
     self.clear_color.x = sys.get_config("render.clear_color_red", 0)
@@ -64,52 +62,6 @@ function init(self)
     self.near = -1
     self.far = 1
     self.projection_fn = stretch_projection
-end
-
-function update_original(self)
-    render.set_depth_mask(true)
-    render.set_stencil_mask(0xff)
-    render.clear({[render.BUFFER_COLOR_BIT] = self.clear_color, [render.BUFFER_DEPTH_BIT] = 1, [render.BUFFER_STENCIL_BIT] = 0})
-
-    render.set_viewport(0, 0, render.get_window_width(), render.get_window_height())
-    render.set_view(self.view)
-
-    render.set_depth_mask(false)
-    render.disable_state(render.STATE_DEPTH_TEST)
-    render.disable_state(render.STATE_STENCIL_TEST)
-    render.enable_state(render.STATE_BLEND)
-    render.set_blend_func(render.BLEND_SRC_ALPHA, render.BLEND_ONE_MINUS_SRC_ALPHA)
-    render.disable_state(render.STATE_CULL_FACE)
-
-    render.set_projection(get_projection(self))
-
-    render.draw(self.tile_pred)
-    render.draw(self.particle_pred)
-    render.draw_debug3d()
-
-    -- render models
-    --
-    render.set_blend_func(render.BLEND_SRC_ALPHA, render.BLEND_ONE_MINUS_SRC_ALPHA)
-    render.enable_state(render.STATE_CULL_FACE)
-    render.enable_state(render.STATE_DEPTH_TEST)
-    render.set_depth_mask(true)
-    render.draw(self.model_pred)
-
-    -- debug rendering
-    --
-    render.disable_state(render.STATE_DEPTH_TEST)
-    render.disable_state(render.STATE_CULL_FACE)    
-    render.draw_debug3d()
-    
-    -- render GUI
-    --
-    render.set_view(vmath.matrix4())
-    render.set_projection(vmath.matrix4_orthographic(0, render.get_window_width(), 0, render.get_window_height(), -1, 1))
-
-    render.enable_state(render.STATE_STENCIL_TEST)
-    render.draw(self.gui_pred)
-    render.draw(self.text_pred)
-    render.disable_state(render.STATE_STENCIL_TEST)
 end
 
 -- The new update using the deferred rendering manager
@@ -142,7 +94,7 @@ function update(self)
     render.enable_state(render.STATE_DEPTH_TEST)
     render.set_depth_mask(true)
 
-    ObjManager.RenderAll(gObjectManager)
+    RenderManager.RenderAll(gRenderManager)
 
     -- debug rendering
     --
@@ -183,8 +135,8 @@ function on_message(self, message_id, message)
         self.far = message.far or 1
         self.projection_fn = fixed_fit_projection
     elseif message_id == hash("add_pass") then 
-        ObjManager.AddPass(gObjectManager, message.index, message.name, message.outtex)
+        RenderManager.AddPass(gRenderManager, message.index, message.name, message.outtex)
     elseif message_id == hash("add_combine") then 
-        ObjManager.AddCombine(gObjectManager, message.index, message.name, message.tex1, message.tex2, message.outtex)
+        RenderManager.AddCombine(gRenderManager, message.index, message.name, message.tex1, message.tex2, message.outtex)
     end
 end

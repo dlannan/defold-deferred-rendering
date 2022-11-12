@@ -1,5 +1,6 @@
 name: "fullscreen"
 tags: "combine_0"
+tags: "combine_1"
 vertex_program: "/assets/materials/albedo.vp"
 fragment_program: "/assets/materials/albedo.fp"
 vertex_space: VERTEX_SPACE_LOCAL

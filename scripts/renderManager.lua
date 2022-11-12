@@ -75,7 +75,7 @@ RM.Init = function(mgr)
 	}
 
 	-- This is an internal default clear color. This can be overridden per pass.
-	mgr.clear_color = vmath.vector4(1, 0, 0, 0)
+	mgr.clear_color = vmath.vector4(0, 0, 0, 0)
 	
 	--mgr.clear_color.x = sys.get_config("render.clear_color_red", 0)
 	--mgr.clear_color.y = sys.get_config("render.clear_color_green", 0)
@@ -165,10 +165,34 @@ RM.AddCombine = function(mgr, index, shadername, src1, src2, outtex)
 end
 
 -- ' -----------------------------------------------------------------
+-- ' Allow setting the view matrix and viewport for a pass
+-- '
+RM.SetPassView = function(mgr, index, view )
+	local cpass = mgr.passes[index]
+	if(pass) then 
+		pass.view = view 
+		mgr.passes[index] = pass
+	end
+end
+
+-- ' -----------------------------------------------------------------
+-- ' Allow setting the view matrix and viewport for a combine
+-- '
+RM.SetCombineView = function(mgr, index, view )
+	local combine = mgr.combines[index]
+	if(combine) then 
+		combine.view = view 
+		mgr.combines[index] = combine
+	end
+end
+
+-- ' -----------------------------------------------------------------
 -- ' Main function for rendering.. all the action realy happens here.
 -- '
 -- ' Passes and combines are all processed here in order.
-RM.RenderAll = function(mgr)
+RM.RenderAll = function(mgr, renderobj)
+		
+	render.set_view(renderobj.view)
 
 	-- ' Iterate the passes that are valid in the list		
 	for p=0, MAX_PASSES-1 do
@@ -176,7 +200,12 @@ RM.RenderAll = function(mgr)
 			if mgr.passes[p].enable == 1 then
 				-- ' This is not quite what we want.. but it will do
 				local pass = mgr.passes[p]			
-
+				if(pass and pass.view) then 
+					local view = pass.view
+					render.set_viewport(view.vp.x, view.vp.y, view.vp.width, view.vp.height)
+					render.set_view(view.matrix)
+				end				
+				
 				if(pass.render_target ~= render.RENDER_TARGET_DEFAULT) then 
 					render.set_render_target(pass.render_target) --, { transient = { pass.clearDepth, 0 } } )
 				end 
@@ -204,7 +233,13 @@ RM.RenderAll = function(mgr)
 	for c=0, MAX_COMBINES-1 do
 		if mgr.combines[c] ~= nil then
 			if mgr.combines[c].enable == 1 then
+
 				local combine = mgr.combines[c]
+				if(combine and combine.view) then 
+					local view = combine.view
+					render.set_viewport(view.vp.x, view.vp.y, view.vp.z, view.vp.w)
+					render.set_view(view.matrix)
+				end				
 
 				if(combine.render_target ~= render.RENDER_TARGET_DEFAULT) then 
 					render.set_render_target(combine.render_target) --, { transient = { combine.clearDepth, 0 } } )

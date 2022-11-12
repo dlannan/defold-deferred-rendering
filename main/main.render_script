@@ -94,7 +94,8 @@ function update(self)
     render.enable_state(render.STATE_DEPTH_TEST)
     render.set_depth_mask(true)
 
-    RenderManager.RenderAll(gRenderManager)
+    -- Can change scene camera if needed when rendering.
+    RenderManager.RenderAll(gRenderManager, self)
 
     -- debug rendering
     --
@@ -119,6 +120,13 @@ function on_message(self, message_id, message, sender)
     elseif message_id == hash("set_view_projection") then
         self.view = message.view
         self.projection = message.projection
+    elseif message_id == hash("set_view") then
+        -- Assume pass by defult
+        if(message.combine) then 
+            RenderManager.SetCombineView( gRenderManager, message.index, message.view )
+        else
+            RenderManager.SetPassView( gRenderManager, message.index, message.view )
+        end
     elseif message_id == hash("use_camera_projection") then
         self.projection_fn = function() return self.projection or vmath.matrix4() end
     elseif message_id == hash("use_stretch_projection") then
@@ -140,7 +148,6 @@ function on_message(self, message_id, message, sender)
         RenderManager.AddCombine(gRenderManager, message.index, message.name, message.tex1, message.tex2, message.outtex)
     elseif message_id == hash("get_pass") then 
         local pn = message.pass_id or 0
-        pprint(gRenderManager)
         msg.post( sender, "get_pass", { index=pn, pass=gRenderManager.passes[pn] } )
     end
 end

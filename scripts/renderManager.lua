@@ -75,11 +75,12 @@ RM.Init = function(mgr)
 	}
 
 	-- This is an internal default clear color. This can be overridden per pass.
-	mgr.clear_color = vmath.vector4(0, 0, 0, 0)
-	mgr.clear_color.x = sys.get_config("render.clear_color_red", 0)
-	mgr.clear_color.y = sys.get_config("render.clear_color_green", 0)
-	mgr.clear_color.z = sys.get_config("render.clear_color_blue", 0)
-	mgr.clear_color.w = sys.get_config("render.clear_color_alpha", 0)	
+	mgr.clear_color = vmath.vector4(1, 0, 0, 0)
+	
+	--mgr.clear_color.x = sys.get_config("render.clear_color_red", 0)
+	--mgr.clear_color.y = sys.get_config("render.clear_color_green", 0)
+	--mgr.clear_color.z = sys.get_config("render.clear_color_blue", 0)
+	--mgr.clear_color.w = sys.get_config("render.clear_color_alpha", 0)	
 
 	-- Make predicates for passes
 	for pn = 0, MAX_PASSES-1 do 
@@ -113,7 +114,7 @@ RM.AddPass = function(mgr, index, shadername, outtex)
 	pass.shaderName		= shadername
 	pass.outTex 		= outtex
 	-- ' Some basic defaults
-	pass.clearColour 	= RM.clear_color  -- GL_COLOR_BUFFER_BIT
+	pass.clearColour 	= mgr.clear_color  -- GL_COLOR_BUFFER_BIT
 	pass.clearDepth 	= 1  	-- GL_DEPTH_BUFFER_BIT
 	pass.saveDepth		= -1	-- ' defines this id as invalid
 	pass.enable			= 1
@@ -150,7 +151,7 @@ RM.AddCombine = function(mgr, index, shadername, src1, src2, outtex)
 	combine.outTex = outtex
 	combine.src1Tex = src1 
 	combine.src2Tex = src2 
-	combine.clearColour 	= RM.clear_color -- GL_COLOR_BUFFER_BIT
+	combine.clearColour 	= vmath.vector4(0, 0, 0, 0)
 	combine.clearDepth 		= 1 -- GL_DEPTH_BUFFER_BIT
 	combine.enable  = 1
 
@@ -180,7 +181,7 @@ RM.RenderAll = function(mgr)
 					render.set_render_target(pass.render_target) --, { transient = { pass.clearDepth, 0 } } )
 				end 
 
-				render.clear({[render.BUFFER_COLOR_BIT] = vmath.vector4(0, 0, 0, 0), [render.BUFFER_DEPTH_BIT] = 1})
+				--render.clear({[render.BUFFER_COLOR_BIT] = vmath.vector4(0, 0, 0, 0), [render.BUFFER_DEPTH_BIT] = 1})
 				render.clear({[render.BUFFER_COLOR_BIT] = pass.clearColour, [render.BUFFER_DEPTH_BIT] = pass.clearDepth})
 
 				render.enable_material(pass.shaderName)

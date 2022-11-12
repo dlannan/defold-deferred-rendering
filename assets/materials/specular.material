@@ -1,5 +1,5 @@
 name: "specular"
-tags: "pass_1"
+tags: "pass_0"
 vertex_program: "/assets/materials/albedo.vp"
 fragment_program: "/assets/materials/albedo.fp"
 vertex_space: VERTEX_SPACE_LOCAL

@@ -113,7 +113,7 @@ function update(self)
     render.disable_state(render.STATE_STENCIL_TEST)    
 end 
 
-function on_message(self, message_id, message)
+function on_message(self, message_id, message, sender)
     if message_id == hash("clear_color") then
         self.clear_color = message.color
     elseif message_id == hash("set_view_projection") then
@@ -138,5 +138,9 @@ function on_message(self, message_id, message)
         RenderManager.AddPass(gRenderManager, message.index, message.name, message.outtex)
     elseif message_id == hash("add_combine") then 
         RenderManager.AddCombine(gRenderManager, message.index, message.name, message.tex1, message.tex2, message.outtex)
+    elseif message_id == hash("get_pass") then 
+        local pn = message.pass_id or 0
+        pprint(gRenderManager)
+        msg.post( sender, "get_pass", { index=pn, pass=gRenderManager.passes[pn] } )
     end
 end

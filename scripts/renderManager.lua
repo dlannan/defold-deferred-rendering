@@ -92,7 +92,7 @@ RM.Init = function(mgr)
 		mgr["combine_pred_"..cn] = render.predicate({"combine_"..cn})
 	end
 
-	mgr["output_pred"] = render.predicate({"output"})
+	mgr["render_texture"] = render.predicate({"render_texture"})
 end 
 
 -- ' -----------------------------------------------------------------
@@ -111,18 +111,20 @@ RM.SetPassRenderTarget = function(pass, color, depth)
 end
 
 -- ' -----------------------------------------------------------------
-RM.AddPass = function(mgr, index, shadername)
+RM.AddPass = function(mgr, msg)
+
 	local pass = {}
-	pass.shaderName		= shadername
+	pass.shaderName		= msg.name
 	-- ' Some basic defaults
 	pass.clearColour 	= mgr.clear_color  -- GL_COLOR_BUFFER_BIT
 	pass.clearDepth 	= 1  	-- GL_DEPTH_BUFFER_BIT
 	pass.saveDepth		= -1	-- ' defines this id as invalid
 	pass.enable			= 1
+	pass.view 			= msg.view
 
 	RM.SetPassRenderTarget( pass, nil, nil )
 
-	mgr.passes[index] = pass
+	mgr.passes[msg.index] = pass
 end
 
 -- ' -----------------------------------------------------------------
@@ -141,17 +143,19 @@ RM.SetCombineRenderTarget = function(combine, color, depth)
 end
 
 -- ' -----------------------------------------------------------------
-RM.AddCombine = function(mgr, index, shadername, src1, src2)
+RM.AddCombine = function(mgr, msg)
+
 	
 	local combine = {}
-	combine.shaderName = shadername
-	combine.src1Tex = src1 
-	combine.src2Tex = src2 
+	combine.shaderName = msg.name
+	combine.src1Tex = msg.tex0
+	combine.src2Tex = msg.tex1
 	combine.clearColour 	= vmath.vector4(0, 0, 0, 0)
 	combine.clearDepth 		= 1 -- GL_DEPTH_BUFFER_BIT
 	combine.enable  = 1
+	combine.view 	= msg.view
 
-	mgr.combines[index] = combine
+	mgr.combines[msg.index] = combine
 	RM.SetCombineRenderTarget( combine, nil, nil )
 
 end
@@ -179,6 +183,13 @@ RM.SetCombineView = function(mgr, index, view )
 end
 
 -- ' -----------------------------------------------------------------
+-- 'Final Render view settings
+-- '
+RM.SetRenderView = function(mgr, view )
+	mgr.renderView = view 
+end
+
+-- ' -----------------------------------------------------------------
 -- ' Main function for rendering.. all the action realy happens here.
 -- '
 -- ' Passes and combines are all processed here in order.
@@ -200,7 +211,7 @@ RM.RenderAll = function(mgr, renderobj)
 				end				
 				
 				if(pass.render_target) then 
-					render.set_render_target(pass.render_target) --, { transient = { pass.clearDepth, 0 } } )
+					--render.set_render_target(pass.render_target) --, { transient = { pass.clearDepth, 0 } } )
 				end 
 
 				--render.clear({[render.BUFFER_COLOR_BIT] = vmath.vector4(0, 0, 0, 0), [render.BUFFER_DEPTH_BIT] = 1})
@@ -262,7 +273,7 @@ RM.RenderAll = function(mgr, renderobj)
 				end
 
 				-- Generally this will be a fullscreen quad with associated combine_1 combine_2.. etc predicates
-				render.draw(mgr["combine_pred_"..c])
+				render.draw(mgr["render_texture"])
 			
 				if(combine.src1Tex) then render.disable_texture(0) end
 				if(combine.src2Tex) then render.disable_texture(1) end
@@ -277,13 +288,20 @@ RM.RenderAll = function(mgr, renderobj)
 		end
 	end 
 
+	if(mgr.renderView) then 
+		local view = mgr.renderView
+		render.set_viewport(view.vp.x, view.vp.y, view.vp.z, view.vp.w)
+		render.set_view(view.matrix)
+	end				
+
 	render.set_render_target(render.RENDER_TARGET_DEFAULT)
+
 	for o=0, MAX_COMBINES-1 do 
 		if RTQueue[o+1] then 
 			local pass =  RTQueue[o+1]
-			render.enable_material("output")
-			render.enable_texture(1, pass.render_target, render.BUFFER_COLOR_BIT)
-			render.draw(mgr["output_pred"])
+			render.enable_material("model")
+			render.enable_texture(0, pass.render_target, render.BUFFER_COLOR_BIT)
+			render.draw(mgr["combine_pred_"..o])
 			render.disable_material()
 		end
 	end

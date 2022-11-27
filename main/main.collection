@@ -7,7 +7,6 @@ embedded_instances {
   children: "viewEmission"
   children: "viewMain"
   children: "viewMetalRough"
-  children: "viewRenderTarget"
   data: "components {\n"
   "  id: \"render\"\n"
   "  component: \"/main/render.script\"\n"
@@ -21,8 +20,6 @@ embedded_instances {
   "    y: 0.0\n"
   "    z: 0.0\n"
   "    w: 1.0\n"
-  "  }\n"
-  "  property_decls {\n"
   "  }\n"
   "}\n"
   ""
@@ -46,7 +43,7 @@ embedded_instances {
 embedded_instances {
   id: "renderCam"
   data: "embedded_components {\n"
-  "  id: \"renderCam\"\n"
+  "  id: \"camera\"\n"
   "  type: \"camera\"\n"
   "  data: \"aspect_ratio: 1.0\\n"
   "fov: 0.7854\\n"
@@ -91,6 +88,7 @@ embedded_instances {
   "  type: \"model\"\n"
   "  data: \"mesh: \\\"/builtins/assets/meshes/quad.dae\\\"\\n"
   "material: \\\"/assets/materials/albedo.material\\\"\\n"
+  "textures: \\\"/assets/images/green.png\\\"\\n"
   "skeleton: \\\"\\\"\\n"
   "animations: \\\"\\\"\\n"
   "default_animation: \\\"\\\"\\n"
@@ -133,6 +131,7 @@ embedded_instances {
   "  type: \"model\"\n"
   "  data: \"mesh: \\\"/builtins/assets/meshes/quad.dae\\\"\\n"
   "material: \\\"/assets/materials/fullscreenEmission.material\\\"\\n"
+  "textures: \\\"/assets/images/render_texture.png\\\"\\n"
   "skeleton: \\\"\\\"\\n"
   "animations: \\\"\\\"\\n"
   "default_animation: \\\"\\\"\\n"
@@ -218,6 +217,7 @@ embedded_instances {
   "  type: \"model\"\n"
   "  data: \"mesh: \\\"/builtins/assets/meshes/quad.dae\\\"\\n"
   "material: \\\"/assets/materials/fullscreen.material\\\"\\n"
+  "textures: \\\"/assets/images/brown.png\\\"\\n"
   "skeleton: \\\"\\\"\\n"
   "animations: \\\"\\\"\\n"
   "default_animation: \\\"\\\"\\n"
@@ -270,8 +270,6 @@ embedded_instances {
   "    y: 0.0\n"
   "    z: 0.0\n"
   "    w: 1.0\n"
-  "  }\n"
-  "  property_decls {\n"
   "  }\n"
   "}\n"
   ""
@@ -349,8 +347,6 @@ embedded_instances {
   "    z: 0.0\n"
   "    w: 1.0\n"
   "  }\n"
-  "  property_decls {\n"
-  "  }\n"
   "}\n"
   "components {\n"
   "  id: \"quad\"\n"
@@ -366,8 +362,6 @@ embedded_instances {
   "    z: 0.0\n"
   "    w: 1.0\n"
   "  }\n"
-  "  property_decls {\n"
-  "  }\n"
   "}\n"
   "components {\n"
   "  id: \"sphere\"\n"
@@ -382,8 +376,6 @@ embedded_instances {
   "    y: 0.0\n"
   "    z: 0.0\n"
   "    w: 1.0\n"
-  "  }\n"
-  "  property_decls {\n"
   "  }\n"
   "}\n"
   ""
@@ -405,13 +397,76 @@ embedded_instances {
   }
 }
 embedded_instances {
-  id: "viewRenderTarget"
+  id: "offscreen"
+  children: "renderTextureCam"
+  children: "viewRenderTexture"
+  data: ""
+  position {
+    x: -20.0
+    y: 0.0
+    z: 0.0
+  }
+  rotation {
+    x: 0.0
+    y: 0.0
+    z: 0.0
+    w: 1.0
+  }
+  scale3 {
+    x: 1.0
+    y: 1.0
+    z: 1.0
+  }
+}
+embedded_instances {
+  id: "renderTextureCam"
+  data: "embedded_components {\n"
+  "  id: \"camera\"\n"
+  "  type: \"camera\"\n"
+  "  data: \"aspect_ratio: 1.0\\n"
+  "fov: 0.7854\\n"
+  "near_z: 0.1\\n"
+  "far_z: 1000.0\\n"
+  "auto_aspect_ratio: 1\\n"
+  "\"\n"
+  "  position {\n"
+  "    x: 0.0\n"
+  "    y: 0.0\n"
+  "    z: 0.0\n"
+  "  }\n"
+  "  rotation {\n"
+  "    x: 0.0\n"
+  "    y: 0.0\n"
+  "    z: 0.0\n"
+  "    w: 1.0\n"
+  "  }\n"
+  "}\n"
+  ""
+  position {
+    x: 0.0
+    y: 0.0
+    z: 10.0
+  }
+  rotation {
+    x: 0.0
+    y: 0.0
+    z: 0.0
+    w: 1.0
+  }
+  scale3 {
+    x: 1.0
+    y: 1.0
+    z: 1.0
+  }
+}
+embedded_instances {
+  id: "viewRenderTexture"
   data: "embedded_components {\n"
   "  id: \"model\"\n"
   "  type: \"model\"\n"
   "  data: \"mesh: \\\"/builtins/assets/meshes/quad.dae\\\"\\n"
-  "material: \\\"/assets/materials/fullscreen-rendertarget.material\\\"\\n"
-  "textures: \\\"/assets/images/brown.png\\\"\\n"
+  "material: \\\"/assets/materials/render_texture.material\\\"\\n"
+  "textures: \\\"/assets/images/render_texture.png\\\"\\n"
   "skeleton: \\\"\\\"\\n"
   "animations: \\\"\\\"\\n"
   "default_animation: \\\"\\\"\\n"
@@ -431,7 +486,7 @@ embedded_instances {
   "}\n"
   ""
   position {
-    x: 0.0
+    x: -1.5
     y: 0.0
     z: 0.0
   }
@@ -442,8 +497,8 @@ embedded_instances {
     w: 1.0
   }
   scale3 {
-    x: 15.0
-    y: 9.0
+    x: 9.0
+    y: 6.0
     z: 1.0
   }
 }

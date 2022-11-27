@@ -121,13 +121,8 @@ function on_message(self, message_id, message, sender)
     elseif message_id == hash("set_view_projection") then
         self.view = message.view
         self.projection = message.projection
-    elseif message_id == hash("set_view") then
-        -- Assume pass by defult
-        if(message.combine) then 
-            RenderManager.SetCombineView( gRenderManager, message.index, message.view )
-        else
-            RenderManager.SetPassView( gRenderManager, message.index, message.view )
-        end
+    elseif message_id == hash("set_render_view") then
+        RenderManager.SetRenderView( gRenderManager, message.view )
     elseif message_id == hash("use_camera_projection") then
         self.projection_fn = function() return self.projection or vmath.matrix4() end
     elseif message_id == hash("use_stretch_projection") then
@@ -144,9 +139,9 @@ function on_message(self, message_id, message, sender)
         self.far = message.far or 1
         self.projection_fn = fixed_fit_projection
     elseif message_id == hash("add_pass") then 
-        RenderManager.AddPass(gRenderManager, message.index, message.name, message.outtex)
+        RenderManager.AddPass(gRenderManager, message)
     elseif message_id == hash("add_combine") then 
-        RenderManager.AddCombine(gRenderManager, message.index, message.name, message.tex1, message.tex2, message.outtex)
+        RenderManager.AddCombine(gRenderManager, message)
     elseif message_id == hash("get_pass") then 
         local pn = message.pass_id or 0
         msg.post( sender, "get_pass", { index=pn, pass=gRenderManager.passes[pn] } )

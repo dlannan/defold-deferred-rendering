@@ -16,6 +16,6 @@ materials {
   material: "/assets/materials/fullscreen-blend.material"
 }
 materials {
-  name: "output"
+  name: "model"
   material: "/assets/materials/model.material"
 }

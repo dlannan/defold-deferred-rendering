@@ -1,5 +1,5 @@
 name: "fullscreen"
-tags: "output"
+tags: "combine_1"
 vertex_program: "/assets/materials/albedo.vp"
 fragment_program: "/assets/materials/albedo.fp"
 vertex_space: VERTEX_SPACE_LOCAL
@@ -35,5 +35,4 @@ samplers {
   wrap_v: WRAP_MODE_CLAMP_TO_EDGE
   filter_min: FILTER_MODE_MIN_LINEAR
   filter_mag: FILTER_MODE_MAG_LINEAR
-  max_anisotropy: 1.0
 }

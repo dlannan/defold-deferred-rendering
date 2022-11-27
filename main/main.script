@@ -9,22 +9,22 @@ function init(self)
 	go.animate("/main", "euler.y", go.PLAYBACK_LOOP_FORWARD, 360, go.EASING_INOUTQUAD, 12)
 
 	-- tint the cube and the sphere
-	model.set_constant("/main#cube", "tint", vmath.vector4(1,1,0,1))
-	model.set_constant("/main#sphere", "tint", vmath.vector4(1,0,0,1))
+	--model.set_constant("/main#cube", "tint", vmath.vector4(1,1,0,1))
+	--model.set_constant("/main#sphere", "tint", vmath.vector4(1,0,0,1))
 	
 	-- position directional light
 	self.light = vmath.vector4(0, 0, go.get_position().z + 1, 0)
 
-	local offscreenCam = vmath.matrix4_translation(vmath.vector3(20, 0, -5))
+	local offscreenCam 	= vmath.matrix4_translation(vmath.vector3(20, 0, -5))
 	local offscreenView = { matrix = offscreenCam, vp = vmath.vector4(0, 0, 1920.0, 1080.0) }
 
-	msg.post("@render:", "add_pass", { index=0, name="albedo" })
-	msg.post("@render:", "add_pass", { index=1, name="specular" })
-	msg.post("@render:", "add_combine", { index=0, name="fullscreen", tex1=0, tex2=1, view=offscreenView })
-	msg.post("@render:", "add_combine", { index=1, name="fullscreen-blend", tex1=-1, tex2=1, view=offscreenView })
+	msg.post("@render:", "add_pass", 	{ index=0, name="albedo" })
+	msg.post("@render:", "add_pass", 	{ index=1, name="specular" })
+	msg.post("@render:", "add_combine", { index=0, name="fullscreen", tex0=0, tex1=1, view=offscreenView })
+	--msg.post("@render:", "add_combine", { index=1, name="fullscreen-blend", tex1=-1, tex2=1, view=offscreenView })
 
-	local renderCam = vmath.matrix4_translation(vmath.vector3(-20, 0, -10))
-	local renderView = { matrix = renderCam, vp = vmath.vector4(0, 0, 960.0, 640.0) }
+	local renderCam 	= vmath.matrix4_translation(vmath.vector3(20, 0, -10))
+	local renderView 	= { matrix = renderCam, vp = vmath.vector4(0, 0, 960.0, 640.0) }
 	msg.post("@render:", "set_render_view", { index=0, view=renderView } )
 end
 

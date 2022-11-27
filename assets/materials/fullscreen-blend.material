@@ -1,5 +1,4 @@
 name: "fullscreen"
-tags: "combine_0"
 tags: "combine_1"
 vertex_program: "/assets/materials/albedo.vp"
 fragment_program: "/assets/materials/fullscreen-blend.fp"
@@ -40,5 +39,19 @@ fragment_constants {
     w: 1.0
   }
 }
-textures: "tex0"
-textures: "tex1"
+samplers {
+  name: "tex0"
+  wrap_u: WRAP_MODE_CLAMP_TO_EDGE
+  wrap_v: WRAP_MODE_CLAMP_TO_EDGE
+  filter_min: FILTER_MODE_MIN_LINEAR
+  filter_mag: FILTER_MODE_MAG_LINEAR
+  max_anisotropy: 1.0
+}
+samplers {
+  name: "tex1"
+  wrap_u: WRAP_MODE_CLAMP_TO_EDGE
+  wrap_v: WRAP_MODE_CLAMP_TO_EDGE
+  filter_min: FILTER_MODE_MIN_LINEAR
+  filter_mag: FILTER_MODE_MAG_LINEAR
+  max_anisotropy: 1.0
+}

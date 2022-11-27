@@ -75,7 +75,7 @@ RM.Init = function(mgr)
 	}
 
 	-- This is an internal default clear color. This can be overridden per pass.
-	mgr.clear_color = vmath.vector4(0, 0, 0, 0)
+	mgr.clear_color = vmath.vector4(0, 0, 0, 1)
 	
 	--mgr.clear_color.x = sys.get_config("render.clear_color_red", 0)
 	--mgr.clear_color.y = sys.get_config("render.clear_color_green", 0)
@@ -116,9 +116,9 @@ RM.AddPass = function(mgr, msg)
 	local pass = {}
 	pass.shaderName		= msg.name
 	-- ' Some basic defaults
-	pass.clearColour 	= mgr.clear_color  -- GL_COLOR_BUFFER_BIT
-	pass.clearDepth 	= 1  	-- GL_DEPTH_BUFFER_BIT
-	pass.saveDepth		= -1	-- ' defines this id as invalid
+	pass.clearColour 	= mgr.clear_color  	-- GL_COLOR_BUFFER_BIT
+	pass.clearDepth 	= 1  				-- GL_DEPTH_BUFFER_BIT
+	pass.saveDepth		= -1				-- ' defines this id as invalid
 	pass.enable			= 1
 	pass.view 			= msg.view
 
@@ -144,20 +144,18 @@ end
 
 -- ' -----------------------------------------------------------------
 RM.AddCombine = function(mgr, msg)
-
 	
 	local combine = {}
-	combine.shaderName = msg.name
-	combine.src1Tex = msg.tex0
-	combine.src2Tex = msg.tex1
-	combine.clearColour 	= vmath.vector4(0, 0, 0, 0)
+	combine.shaderName 		= msg.name
+	combine.src1Tex 		= msg.tex0
+	combine.src2Tex 		= msg.tex1
+	combine.clearColour 	= vmath.vector4(0, 0, 0, 1)
 	combine.clearDepth 		= 1 -- GL_DEPTH_BUFFER_BIT
-	combine.enable  = 1
-	combine.view 	= msg.view
+	combine.enable  		= 1
+	combine.view 			= msg.view
 
 	mgr.combines[msg.index] = combine
 	RM.SetCombineRenderTarget( combine, nil, nil )
-
 end
 
 -- ' -----------------------------------------------------------------
@@ -204,15 +202,16 @@ RM.RenderAll = function(mgr, renderobj)
 				
 				-- ' This is not quite what we want.. but it will do
 				local pass = mgr.passes[p]			
-				if(pass and pass.view) then 
-					local view = pass.view
-					render.set_viewport(view.vp.x, view.vp.y, view.vp.width, view.vp.height)
-					render.set_view(view.matrix)
-				end				
-				
-				if(pass.render_target) then 
-					--render.set_render_target(pass.render_target) --, { transient = { pass.clearDepth, 0 } } )
-				end 
+				-- if(pass and pass.view) then 
+				-- 	local view = pass.view
+				-- 	render.set_viewport(view.vp.x, view.vp.y, view.vp.width, view.vp.height)
+				-- 	render.set_view(view.matrix)
+				-- end				
+
+				--if(pass.render_target) then 
+					pprint(p, mgr["pass_pred_"..p])
+					render.set_render_target(pass.render_target) --, { transient = { pass.clearDepth, 0 } } )
+				--end 
 
 				--render.clear({[render.BUFFER_COLOR_BIT] = vmath.vector4(0, 0, 0, 0), [render.BUFFER_DEPTH_BIT] = 1})
 				render.clear({[render.BUFFER_COLOR_BIT] = pass.clearColour, [render.BUFFER_DEPTH_BIT] = pass.clearDepth})
@@ -233,6 +232,8 @@ RM.RenderAll = function(mgr, renderobj)
 	--   in the input texture as a negative number. 
 	--  Combine indexes are 1 to MAX_COMBINES
 	local RTQueue = {}
+
+	if COMBINES then 
 
 	for c=0, MAX_COMBINES-1 do
 		if mgr.combines[c] ~= nil then
@@ -262,6 +263,7 @@ RM.RenderAll = function(mgr, renderobj)
 					end 
 					render.enable_texture(0, texrt.render_target, render.BUFFER_COLOR_BIT)
 				end 
+
 				if(combine.src2Tex) then 
 					local texrt = nil
 					if(combine.src2Tex < 0) then 
@@ -288,6 +290,8 @@ RM.RenderAll = function(mgr, renderobj)
 		end
 	end 
 
+	end
+
 	if(mgr.renderView) then 
 		local view = mgr.renderView
 		render.set_viewport(view.vp.x, view.vp.y, view.vp.z, view.vp.w)
@@ -296,17 +300,22 @@ RM.RenderAll = function(mgr, renderobj)
 
 	render.set_render_target(render.RENDER_TARGET_DEFAULT)
 
-	for o=0, MAX_COMBINES-1 do 
-		if RTQueue[o+1] then 
-			local pass =  RTQueue[o+1]
-			render.enable_material("model")
-			render.enable_texture(0, pass.render_target, render.BUFFER_COLOR_BIT)
-			render.draw(mgr["combine_pred_"..o])
-			render.disable_material()
-		end
-	end
-end
+	-- for o=0, MAX_COMBINES-1 do 
+	-- 	if RTQueue[o+1] then 
+	-- 		local combine =  RTQueue[o+1]
+	-- 		render.enable_material("model")
+	-- 		render.enable_texture(0, combine.render_target, render.BUFFER_COLOR_BIT)
+	-- 		render.draw(mgr["combine_pred_"..o])
+	-- 		render.disable_material()
+	-- 	end
+	-- end
 
+	render.enable_material("model")
+	local pass = mgr.passes[0]
+	render.enable_texture(0, pass.render_target, render.BUFFER_COLOR_BIT)
+	render.draw(mgr["combine_pred_0"])
+	render.disable_material()
+end
 
 -- ' -----------------------------------------------------------------
 -- ' Render targets to output objects

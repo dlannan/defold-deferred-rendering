@@ -15,10 +15,10 @@ function init(self)
 	-- position directional light
 	self.light = vmath.vector4(0, 0, go.get_position().z + 1, 0)
 
-	msg.post("@render:", "add_pass", { index=0, name="albedo", outtex=1 })
-	msg.post("@render:", "add_pass", { index=1, name="specular", outtex=1 })
-	msg.post("@render:", "add_combine", { index=0, name="fullscreen", tex1=0, tex2=1, outtex=1 })
-	msg.post("@render:", "add_combine", { index=1, name="fullscreen-blend", tex1=-1, tex2=1, outtex=nil })
+	msg.post("@render:", "add_pass", { index=0, name="albedo" })
+	msg.post("@render:", "add_pass", { index=1, name="specular" })
+	msg.post("@render:", "add_combine", { index=0, name="fullscreen", tex1=0, tex2=1 })
+	msg.post("@render:", "add_combine", { index=1, name="fullscreen-blend", tex1=-1, tex2=1 })
 
 
 	local deferredCam1 = vmath.matrix4_translation(vmath.vector3(-20, 0, -5))

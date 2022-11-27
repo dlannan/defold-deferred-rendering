@@ -91,6 +91,8 @@ RM.Init = function(mgr)
 	for cn = 0, MAX_COMBINES-1 do 
 		mgr["combine_pred_"..cn] = render.predicate({"combine_"..cn})
 	end
+
+	mgr["output_pred"] = render.predicate({"output"})
 end 
 
 -- ' -----------------------------------------------------------------
@@ -109,21 +111,16 @@ RM.SetPassRenderTarget = function(pass, color, depth)
 end
 
 -- ' -----------------------------------------------------------------
-RM.AddPass = function(mgr, index, shadername, outtex)
+RM.AddPass = function(mgr, index, shadername)
 	local pass = {}
 	pass.shaderName		= shadername
-	pass.outTex 		= outtex
 	-- ' Some basic defaults
 	pass.clearColour 	= mgr.clear_color  -- GL_COLOR_BUFFER_BIT
 	pass.clearDepth 	= 1  	-- GL_DEPTH_BUFFER_BIT
 	pass.saveDepth		= -1	-- ' defines this id as invalid
 	pass.enable			= 1
 
-	if( outtex == nil ) then 
-		pass.render_target = render.RENDER_TARGET_DEFAULT
-	else 
-		RM.SetPassRenderTarget( pass, nil, nil )
-	end 
+	RM.SetPassRenderTarget( pass, nil, nil )
 
 	mgr.passes[index] = pass
 end
@@ -144,11 +141,10 @@ RM.SetCombineRenderTarget = function(combine, color, depth)
 end
 
 -- ' -----------------------------------------------------------------
-RM.AddCombine = function(mgr, index, shadername, src1, src2, outtex)
+RM.AddCombine = function(mgr, index, shadername, src1, src2)
 	
 	local combine = {}
 	combine.shaderName = shadername
-	combine.outTex = outtex
 	combine.src1Tex = src1 
 	combine.src2Tex = src2 
 	combine.clearColour 	= vmath.vector4(0, 0, 0, 0)
@@ -156,12 +152,8 @@ RM.AddCombine = function(mgr, index, shadername, src1, src2, outtex)
 	combine.enable  = 1
 
 	mgr.combines[index] = combine
+	RM.SetCombineRenderTarget( combine, nil, nil )
 
-	if( outtex == nil ) then 
-		combine.render_target = render.RENDER_TARGET_DEFAULT
-	else 
-		RM.SetCombineRenderTarget( combine, nil, nil )
-	end 
 end
 
 -- ' -----------------------------------------------------------------
@@ -198,6 +190,7 @@ RM.RenderAll = function(mgr, renderobj)
 	for p=0, MAX_PASSES-1 do
 		if mgr.passes[p] ~= nil then
 			if mgr.passes[p].enable == 1 then
+				
 				-- ' This is not quite what we want.. but it will do
 				local pass = mgr.passes[p]			
 				if(pass and pass.view) then 
@@ -206,7 +199,7 @@ RM.RenderAll = function(mgr, renderobj)
 					render.set_view(view.matrix)
 				end				
 				
-				if(pass.render_target ~= render.RENDER_TARGET_DEFAULT) then 
+				if(pass.render_target) then 
 					render.set_render_target(pass.render_target) --, { transient = { pass.clearDepth, 0 } } )
 				end 
 
@@ -227,7 +220,7 @@ RM.RenderAll = function(mgr, renderobj)
 	--  Combine pass outputs as required using appropriate 
 	--  A queue of the combine passes. In a combine pass the queue can be referred to
 	--   in the input texture as a negative number. 
-	--  Combine indexes are -1 to -MAX_COMBINES
+	--  Combine indexes are 1 to MAX_COMBINES
 	local RTQueue = {}
 
 	for c=0, MAX_COMBINES-1 do
@@ -241,7 +234,7 @@ RM.RenderAll = function(mgr, renderobj)
 					render.set_view(view.matrix)
 				end				
 
-				if(combine.render_target ~= render.RENDER_TARGET_DEFAULT) then 
+				if(combine.render_target) then 
 					render.set_render_target(combine.render_target) --, { transient = { combine.clearDepth, 0 } } )
 				end
 
@@ -252,7 +245,7 @@ RM.RenderAll = function(mgr, renderobj)
 				if(combine.src1Tex) then 
 					local texrt = nil
 					if(combine.src1Tex < 0) then 
-						texrt = RTQueue[combine.src1Tex]
+						texrt = RTQueue[-combine.src1Tex]
 					else
 						texrt = mgr.passes[combine.src1Tex] 
 					end 
@@ -261,7 +254,7 @@ RM.RenderAll = function(mgr, renderobj)
 				if(combine.src2Tex) then 
 					local texrt = nil
 					if(combine.src2Tex < 0) then 
-						texrt = RTQueue[combine.src2Tex]
+						texrt = RTQueue[-combine.src2Tex]
 					else
 						texrt = mgr.passes[combine.src2Tex] 
 					end 
@@ -275,14 +268,33 @@ RM.RenderAll = function(mgr, renderobj)
 				if(combine.src2Tex) then render.disable_texture(1) end
 				render.disable_material()
 
-				if(combine.render_target ~= render.RENDER_TARGET_DEFAULT) then
-					RTQueue[-(c+1)] = combine
+				if(combine.render_target) then
+					RTQueue[c+1] = combine
 				end
 
 				render.set_render_target(render.RENDER_TARGET_DEFAULT)
 			end
 		end
 	end 
+
+	render.set_render_target(render.RENDER_TARGET_DEFAULT)
+	for o=0, MAX_COMBINES-1 do 
+		if RTQueue[o+1] then 
+			local pass =  RTQueue[o+1]
+			render.enable_material("output")
+			render.enable_texture(1, pass.render_target, render.BUFFER_COLOR_BIT)
+			render.draw(mgr["output_pred"])
+			render.disable_material()
+		end
+	end
+end
+
+
+-- ' -----------------------------------------------------------------
+-- ' Render targets to output objects
+-- '
+RM.RenderOutputs = function(mgr, renderobj)
+
 end
 
 -- This is an easier way to create a new table for an Object Manager without settings.

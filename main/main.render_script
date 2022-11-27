@@ -96,7 +96,8 @@ function update(self)
 
     -- Can change scene camera if needed when rendering.
     RenderManager.RenderAll(gRenderManager, self)
-
+    RenderManager.RenderOutputs(gRenderManager, self)
+    
     -- debug rendering
     --
     render.disable_state(render.STATE_DEPTH_TEST)

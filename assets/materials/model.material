@@ -1,8 +1,7 @@
 name: "model"
-tags: "pass_0"
 tags: "output"
-vertex_program: "/assets/materials/albedo.vp"
-fragment_program: "/assets/materials/albedo.fp"
+vertex_program: "/builtins/materials/model.vp"
+fragment_program: "/builtins/materials/model.fp"
 vertex_space: VERTEX_SPACE_LOCAL
 vertex_constants {
   name: "mtx_worldview"
@@ -19,6 +18,16 @@ vertex_constants {
 vertex_constants {
   name: "mtx_normal"
   type: CONSTANT_TYPE_NORMAL
+}
+vertex_constants {
+  name: "light"
+  type: CONSTANT_TYPE_USER
+  value {
+    x: 1.0
+    y: 1.0
+    z: 1.0
+    w: 1.0
+  }
 }
 fragment_constants {
   name: "tint"

@@ -1,5 +1,5 @@
-name: "fullscreen"
-tags: "combine_1"
+name: "fullscreen-blend"
+tags: "quad"
 vertex_program: "/assets/materials/albedo.vp"
 fragment_program: "/assets/materials/fullscreen-blend.fp"
 vertex_space: VERTEX_SPACE_LOCAL
@@ -55,3 +55,4 @@ samplers {
   filter_mag: FILTER_MODE_MAG_LINEAR
   max_anisotropy: 1.0
 }
+max_page_count: 0

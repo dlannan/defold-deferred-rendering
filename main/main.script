@@ -18,14 +18,53 @@ function init(self)
 	local offscreenCam 	= vmath.matrix4_translation(vmath.vector3(20, 0, -5))
 	local offscreenView = { matrix = offscreenCam, vp = vmath.vector4(0, 0, 1920.0, 1080.0) }
 
-	msg.post("@render:", "add_pass", 	{ index=0, name="albedo" })
-	msg.post("@render:", "add_pass", 	{ index=1, name="specular" })
-	msg.post("@render:", "add_combine", { index=0, name="fullscreen", tex0=0, tex1=1, view=offscreenView })
-	--msg.post("@render:", "add_combine", { index=1, name="fullscreen-blend", tex1=-1, tex2=1, view=offscreenView })
+	-- Notes:
+	-- 	Adding a pass applies a material to a predicate and stores it in a render texture.
+	--  The render texture needs to be created before use as well. 
+	--  Many passes can be added together, input textures can be provided by the material
+	--
 
-	local renderCam 	= vmath.matrix4_translation(vmath.vector3(20, 0, -10))
+	-- Add predicates we want to use in materials to define render sections
+	msg.post("@render:", "add_predicate", { name="quad" } )
+	msg.post("@render:", "add_predicate", { name="albedo" } )
+	
+	msg.post("@render:", "new_render_target", { name="middle" } )
+	msg.post("@render:", "new_render_target", { name="left" } )
+	msg.post("@render:", "new_render_target", { name="pass1" } )
+	msg.post("@render:", "new_render_target", { name="pass2" } )
+	
+	-- Order matters. This is kept for order of render
+	local rt_view 	= vmath.matrix4_translation(vmath.vector3(0, 0, -10))
+	local renderCam 	= vmath.matrix4_translation(vmath.vector3(-20, 0, -10))
+	local outputCam 	= vmath.matrix4_translation(vmath.vector3(20, 0, -10))
+		
+	msg.post("@render:", "add_pass", 
+		{ name="middle", preds={"model",}, material="albedo", output="middle", view=rt_view })
+
+	msg.post("@render:", "add_pass", 
+		{ name="left", preds={"model",}, material="albedo", output="left", view=outputCam })
+	
+-- 	msg.post("@render:", "add_pass", 
+-- 		{ name="gui", preds={"model",}, material="albedo", output="gui", view=renderCam })
+-- 		
+-- 	msg.post("@render:", "add_pass", 
+-- 		{ name="rect", preds={"quad",}, material="fullscreen-blend", tex0="base", tex1="gui", view=outputCam, output=nil })
+
+	-- Notes: 
+	-- 	To combine passes, use the add_pass with input textures as render texture. 
+	--  If no output texture is set, then it will output to the screen
+	msg.post("@render:", "add_pass", 	
+		{ name="middle-top", preds={"albedo",}, material="albedo_top", tex0="left", view=renderCam, output="pass1" })
+	
+	msg.post("@render:", "add_pass", 	
+		{ name="rect", preds={"quad",}, material="albedo", tex0="middle", view=renderCam, output="pass2" })
+	
+	msg.post("@render:", "add_pass", 	
+		{ name="final", preds={"quad",}, material="fullscreen-blend", tex0="pass1", tex1="pass2", view=renderCam, output=nil })
+
 	local renderView 	= { matrix = renderCam, vp = vmath.vector4(0, 0, 960.0, 640.0) }
-	msg.post("@render:", "set_render_view", { index=0, view=renderView } )
+
+	msg.post("@render:", "set_render_view", { index=1, view=renderView } )
 end
 
 function on_input(self, action_id, action)

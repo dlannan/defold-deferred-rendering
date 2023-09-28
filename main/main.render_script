@@ -37,14 +37,27 @@ local function get_projection(self)
     return self.projection_fn(self.near, self.far, self.zoom)
 end
 
+local function add_predicate(self, name)
+    self.predicates[name] = render.predicate({name})
+    gRenderManager.preds[name] = self.predicates[name]
+end
+
 function init(self)
+    self.predicates = {}
+    self.add_predicate = add_predicate
+    
     self.tile_pred = render.predicate({"tile"})
     self.gui_pred = render.predicate({"gui"})
     self.text_pred = render.predicate({"text"})
     self.particle_pred = render.predicate({"particle"})
     self.model_pred = render.predicate({"model"})
     
-    RenderManager.Init(gRenderManager)
+    RenderManager.Init(gRenderManager, self)
+    gRenderManager.preds["tile"] = self.tile_pred
+    gRenderManager.preds["gui"] = self.gui_pred
+    gRenderManager.preds["text"] = self.text_pred
+    gRenderManager.preds["particle"] = self.particle_pred
+    gRenderManager.preds["model"] = self.model_pred
 
     self.clear_color = vmath.vector4(0, 0, 0, 0)
     self.clear_color.x = sys.get_config("render.clear_color_red", 0)
@@ -96,7 +109,6 @@ function update(self)
 
     -- Can change scene camera if needed when rendering.
     RenderManager.RenderAll(gRenderManager, self)
-    RenderManager.RenderOutputs(gRenderManager, self)
     
     -- debug rendering
     --
@@ -138,12 +150,16 @@ function on_message(self, message_id, message, sender)
         self.near = message.near or -1
         self.far = message.far or 1
         self.projection_fn = fixed_fit_projection
+    elseif message_id == hash("new_render_target") then 
+        RenderManager.NewRenderTarget(gRenderManager, message)
     elseif message_id == hash("add_pass") then 
         RenderManager.AddPass(gRenderManager, message)
-    elseif message_id == hash("add_combine") then 
-        RenderManager.AddCombine(gRenderManager, message)
     elseif message_id == hash("get_pass") then 
         local pn = message.pass_id or 0
         msg.post( sender, "get_pass", { index=pn, pass=gRenderManager.passes[pn] } )
+    elseif message_id == hash("set_material_render_target") then 
+        RenderManager.SetMaterialRenderTarget(gRenderManager, message)
+    elseif message_id == hash("add_predicate") then 
+        RenderManager.AddPredicate(gRenderManager, message)
     end
 end

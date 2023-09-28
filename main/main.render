@@ -19,3 +19,7 @@ materials {
   name: "model"
   material: "/assets/materials/model.material"
 }
+materials {
+  name: "albedo_top"
+  material: "/assets/materials/albedo_top.material"
+}

@@ -1,7 +1,5 @@
 name: "model"
 tags: "model"
-tags: "pass_0"
-tags: "pass_1"
 vertex_program: "/builtins/materials/model.vp"
 fragment_program: "/builtins/materials/model.fp"
 vertex_space: VERTEX_SPACE_LOCAL
@@ -49,3 +47,4 @@ samplers {
   filter_mag: FILTER_MODE_MAG_LINEAR
   max_anisotropy: 1.0
 }
+max_page_count: 0
